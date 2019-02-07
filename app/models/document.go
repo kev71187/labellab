@@ -45,11 +45,17 @@ type (
 	// 	Annotation `json:"annotation"`
 	// }
 
+	DeletedDatasetsDocuments struct {
+		Data       []DatasetsDocument
+		Pagination pagination `json:"pagination"`
+	}
+
 	DatasetsDocument struct {
 		DatasetsAnnotations []DatasetsAnnotation `json:"datasets_annotations"`
 		Document            Document             `json:"document"`
 		Id                  int                  `json:"id"`
 		Annotations         string               `json:"annotations_string"`
+		DeletedAt           string               `json:"deleted_at"`
 	}
 
 	DatasetsDocuments struct {
@@ -58,9 +64,10 @@ type (
 	}
 
 	pagination struct {
-		Count       int    `json:"count"`
-		Annotations uint64 `json:"annotations"`
-		PerPage     int    `json:"per_page"`
+		Count         int    `json:"count"`
+		DocumentCount int    `json:"document_count"`
+		Annotations   uint64 `json:"annotations"`
+		PerPage       int    `json:"per_page"`
 	}
 
 	FileMetadata struct {
@@ -98,6 +105,18 @@ func FileTypeMatch(name string) bool {
 	return matched
 }
 
+func JsonToDeletedDocuments(resp []byte) DeletedDatasetsDocuments {
+	var d DeletedDatasetsDocuments
+
+	err := json.Unmarshal(resp, &d)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return d
+}
+
 func JsonToDocuments(resp []byte) DatasetsDocuments {
 	var d DatasetsDocuments
 
@@ -121,6 +140,18 @@ func (self DatasetsDocument) DocumentFileName() string {
 	return self.FileName() + "." + s[1]
 }
 
+func (self DatasetsDocument) Destroy(directory string) {
+
+	filePath := directory + "/files" + "/" + self.DocumentFileName()
+	labelPath := directory + "/labels" + "/" + self.AnnotationsFileName()
+	// labelsDirectory := directory + "/labels"
+	if Exists(filePath) {
+		os.Remove(filePath)
+	}
+	if Exists(labelPath) {
+		os.Remove(labelPath)
+	}
+}
 func (self DatasetsDocuments) SaveAnnotations(directory string) {
 	for i := 0; i < len(self.Data); i++ {
 		dd := self.Data[i]

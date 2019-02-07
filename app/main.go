@@ -39,6 +39,11 @@ func main() {
 		return
 	}
 
+	if args[1] == "remote" {
+		fmt.Println(config.BaseUrl)
+		return
+	}
+
 	if arg1 == "auth" {
 		users.Auth(args[2])
 		return
@@ -50,10 +55,6 @@ func main() {
 	}
 	names, err := getNames(args[1])
 
-	if args[1] == "remote" {
-		fmt.Println(config.BaseUrl)
-		return
-	}
 	if actionCount >= 1 && args[1] == "clone" {
 		var clone_to string
 

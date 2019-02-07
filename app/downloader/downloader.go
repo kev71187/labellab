@@ -111,37 +111,13 @@ func getOffset(dir string) (int, uint64) {
 	return len(files), max
 }
 
-func Download(dataset models.Dataset, directory string, conf config.LabelLabConfig) int {
-	filesDirectory := directory + "/files"
-	labelsDirectory := directory + "/labels"
-	down := Downloader{Config: conf, Files: dataset.DocumentCount, WorkFunc: func(dataset_document models.DatasetsDocument) {
-		models.DownloadFile(filesDirectory, dataset_document)
-	}}
-
-	var totalStart, start = getOffset(filesDirectory)
-	var totalToDownload = down.Files - totalStart
-	fmt.Println("Downloading:", conf.Dataset, "(", dataset.DocumentCount, "Total files ) (", totalToDownload, " Remaining to download )")
-	down.Start(totalStart)
-
-	for i := 0; true; i++ {
-		dd := dataset.DatasetsDocuments(start, i)
-
-		if len(dd.Data) == 0 {
-			break
-		}
-		down.Continue(dd.Data)
-	}
-
-	down.bar.FinishPrint("Finished downloading files")
-
-	fmt.Println("Syncing annotations")
-
-	timer := time.Now()
+func pullAnnotations(dataset models.Dataset, labelsDirectory string, conf config.LabelLabConfig) {
 	var bar *pb.ProgressBar
 
 	for i := 0; true; i++ {
 		dd := dataset.GetDocumentAnnotations(conf.UpdatedAt, i)
-		if i == 0 {
+		if i == 0 && dd.Pagination.Count > 0 {
+			fmt.Println("Syncing annotations")
 			bar = pb.StartNew(dd.Pagination.Count)
 		}
 		if len(dd.Data) == 0 {
@@ -150,7 +126,60 @@ func Download(dataset models.Dataset, directory string, conf config.LabelLabConf
 		dd.SaveAnnotations(labelsDirectory)
 		bar.Add(len(dd.Data))
 	}
+}
+
+func deleteFiles(dataset models.Dataset, directory string, conf config.LabelLabConfig) {
+	var bar *pb.ProgressBar
+
+	for i := 0; true; i++ {
+		dd := dataset.DatasetsDocumentsDeleted(conf.UpdatedAt, i)
+		if i == 0 && dd.Pagination.DocumentCount > 0 {
+			fmt.Println("Deleting files:")
+			bar = pb.StartNew(dd.Pagination.DocumentCount)
+		}
+		if len(dd.Data) == 0 {
+			break
+		}
+		for j := range dd.Data {
+			var doc = dd.Data[j]
+			doc.Destroy(directory)
+			bar.Add(1)
+		}
+		// dd.SaveAnnotations(labelsDirectory)
+	}
+}
+
+func Download(dataset models.Dataset, directory string, conf config.LabelLabConfig) int {
+	filesDirectory := directory + "/files"
+	labelsDirectory := directory + "/labels"
+	timer := time.Now()
+
+	deleteFiles(dataset, directory, conf)
+
+	down := Downloader{Config: conf, Files: dataset.DocumentCount, WorkFunc: func(dataset_document models.DatasetsDocument) {
+		models.DownloadFile(filesDirectory, dataset_document)
+	}}
+
+	var totalStart, start = getOffset(filesDirectory)
+	var totalToDownload = down.Files - totalStart
+	if totalToDownload > 0 {
+		fmt.Println("Downloading:", conf.Dataset, "(", dataset.DocumentCount, "Total files ) (", totalToDownload, " Remaining to download )")
+		down.Start(totalStart)
+
+		for i := 0; true; i++ {
+			dd := dataset.DatasetsDocuments(start, i)
+
+			if len(dd.Data) == 0 {
+				break
+			}
+			down.Continue(dd.Data)
+		}
+
+		down.bar.FinishPrint("Finished downloading files")
+	}
+
+	pullAnnotations(dataset, labelsDirectory, conf)
 	conf.Touch(timer, directory)
-	bar.FinishPrint("Done syncing annotations")
+	fmt.Println("Pull complete")
 	return 1
 }

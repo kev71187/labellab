@@ -31,6 +31,13 @@ type (
 	}
 )
 
+func (self Dataset) DatasetsDocumentsDeleted(start_date string, page int) DeletedDatasetsDocuments {
+	url := "datasets_documents?basic=true&dataset_id=" + IdToString(self.Id) + "&limit=500&page=" + strconv.Itoa(page) + "&deleted=true&start_date=" + url.QueryEscape(start_date)
+	resp := Request("GET", url, nil)
+	r := JsonToDeletedDocuments(resp)
+	return r
+}
+
 func (self Dataset) DatasetsDocuments(start uint64, page int) DatasetsDocuments {
 	url := "datasets_documents?basic=true&dataset_id=" + IdToString(self.Id) + "&limit=500&page=" + strconv.Itoa(page) + "&start=" + IdToString(start)
 	resp := Request("GET", url, nil)
