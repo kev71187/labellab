@@ -113,14 +113,18 @@ func getOffset(dir string) (int, uint64) {
 
 func pullAnnotations(dataset models.Dataset, labelsDirectory string, conf config.LabelLabConfig) {
 	var bar *pb.ProgressBar
-
+	var exists = 0
 	for i := 0; true; i++ {
 		dd := dataset.GetDocumentAnnotations(conf.UpdatedAt, i)
 		if i == 0 && dd.Pagination.Count > 0 {
-			fmt.Println("Syncing annotations")
+			exists = 1
+			fmt.Println("Syncing labels")
 			bar = pb.StartNew(dd.Pagination.Count)
 		}
 		if len(dd.Data) == 0 {
+			if exists == 1 {
+				bar.FinishPrint("Finished syncing labels")
+			}
 			break
 		}
 		dd.SaveAnnotations(labelsDirectory)
@@ -131,13 +135,22 @@ func pullAnnotations(dataset models.Dataset, labelsDirectory string, conf config
 func deleteFiles(dataset models.Dataset, directory string, conf config.LabelLabConfig) {
 	var bar *pb.ProgressBar
 
+	if conf.UpdatedAt == "" {
+		return
+	}
+
+	var exists = 0
 	for i := 0; true; i++ {
 		dd := dataset.DatasetsDocumentsDeleted(conf.UpdatedAt, i)
 		if i == 0 && dd.Pagination.DocumentCount > 0 {
-			fmt.Println("Deleting files:")
+			fmt.Println("Removing deleted files:")
 			bar = pb.StartNew(dd.Pagination.DocumentCount)
+			exists = 1
 		}
 		if len(dd.Data) == 0 {
+			if exists == 1 {
+				bar.FinishPrint("Finished removing files")
+			}
 			break
 		}
 		for j := range dd.Data {

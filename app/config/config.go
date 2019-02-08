@@ -7,11 +7,14 @@ type (
 	}
 )
 
-// var BaseUrl = "http://nginx/api/"
-
-// var BaseUrl = "http://localhost:3334/api/"
-
-// var BaseUrl = "http://localhost:3333/api/"
-
+var Env string
 var BaseUrl = "https://www.labellab.io/api/"
-var AppConfig = ApiConfig{BaseUrl, ""}
+
+func load() ApiConfig {
+	if Env == "local" {
+		BaseUrl = "http://nginx/api/"
+	}
+	return ApiConfig{BaseUrl, ""}
+}
+
+var AppConfig = load()

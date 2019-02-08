@@ -141,7 +141,6 @@ func (self DatasetsDocument) DocumentFileName() string {
 }
 
 func (self DatasetsDocument) Destroy(directory string) {
-
 	filePath := directory + "/files" + "/" + self.DocumentFileName()
 	labelPath := directory + "/labels" + "/" + self.AnnotationsFileName()
 	// labelsDirectory := directory + "/labels"

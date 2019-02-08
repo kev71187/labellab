@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var Env string
+
 func getNames(inp string) ([]string, error) {
 	resp := strings.Split(inp, "/")
 
@@ -25,7 +27,6 @@ func getNames(inp string) ([]string, error) {
 func main() {
 	// storage.Main()
 	args := os.Args
-	// fmt.Println(dir)
 	actionCount := len(args)
 
 	if actionCount == 1 || args[0] == "help" {
